@@ -14,16 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          created_at: string
+          currency: string
+          display_name: string | null
+          id: string
+          status: Database["public"]["Enums"]["account_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          display_name?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          display_name?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      balance_ledger: {
+        Row: {
+          amount_usd: number
+          created_at: string
+          created_by: string | null
+          entry_type: string
+          id: string
+          note: string | null
+          reference_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_usd: number
+          created_at?: string
+          created_by?: string | null
+          entry_type: string
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          allocation_percent: number
+          amount_usd: number
+          created_at: string
+          id: string
+          pair: string
+          provider_order_id: string | null
+          reference_price: number
+          status: Database["public"]["Enums"]["order_status"]
+          user_id: string
+        }
+        Insert: {
+          allocation_percent: number
+          amount_usd: number
+          created_at?: string
+          id?: string
+          pair: string
+          provider_order_id?: string | null
+          reference_price: number
+          status?: Database["public"]["Enums"]["order_status"]
+          user_id: string
+        }
+        Update: {
+          allocation_percent?: number
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          pair?: string
+          provider_order_id?: string | null
+          reference_price?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_balance: { Args: { _user_id: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      initialize_my_account: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      account_status: "active" | "suspended" | "closed"
+      app_role: "admin" | "user"
+      order_status:
+        | "pending_provider"
+        | "submitted"
+        | "filled"
+        | "cancelled"
+        | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +284,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_status: ["active", "suspended", "closed"],
+      app_role: ["admin", "user"],
+      order_status: [
+        "pending_provider",
+        "submitted",
+        "filled",
+        "cancelled",
+        "rejected",
+      ],
+    },
   },
 } as const
