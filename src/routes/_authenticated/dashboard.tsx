@@ -1,0 +1,1 @@
+import{createFileRoute}from"@tanstack/react-router";import{DashboardView}from"@/components/aurum/account-overview";import{pageHead}from"@/components/aurum/page";export const Route=createFileRoute("/_authenticated/dashboard")({head:()=>pageHead("Account overview","Review your Aurelium account balance, market prices, and order controls."),component:DashboardView});
