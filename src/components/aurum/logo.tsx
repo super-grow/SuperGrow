@@ -1,0 +1,2 @@
+import { Link } from "@tanstack/react-router";
+export function Logo() { return <Link to="/" className="group flex items-center gap-2.5" aria-label="Aurelium home"><span className="relative grid size-8 place-items-center overflow-hidden rounded-sm border border-primary/40 bg-primary/10"><span className="absolute h-4 w-4 rotate-45 border border-primary"/><span className="size-1.5 rounded-full bg-primary shadow-[0_0_16px_var(--primary)]"/></span><span className="font-display text-lg font-semibold tracking-normal">AURELIUM<span className="text-primary">.</span></span></Link> }

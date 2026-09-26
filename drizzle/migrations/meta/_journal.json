@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790414545413,
+      "tag": "0000_create_secure_trading_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790414644504,
+      "tag": "0001_secure_account_operations",
+      "breakpoints": true
+    }
+  ]
+}

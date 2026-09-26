@@ -1,24 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
-export const Route = createFileRoute("/")({
-  component: Index,
-});
-
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, ShieldCheck, Landmark, Activity, LockKeyhole, Waypoints } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SiteShell } from "@/components/aurum/site-shell";
+import { MarketTable } from "@/components/aurum/market-table";
+import { pageHead } from "@/components/aurum/page";
+export const Route=createFileRoute("/")({head:()=>pageHead("Aurelium Digital Markets","Secure, transparent digital asset market access with live pricing and institutional-grade account controls."),component:Home});
+function Home(){return <SiteShell><main><section className="hero-mesh grid-surface relative overflow-hidden border-b border-border"><div className="mx-auto grid min-h-[690px] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.05fr_.95fr]"><div className="reveal relative z-10"><p className="eyebrow">Digital asset infrastructure</p><h1 className="mt-6 max-w-3xl font-display text-5xl font-semibold leading-[1.04] md:text-7xl">Markets move fast.<br/><span className="text-primary">Your platform shouldn’t break stride.</span></h1><p className="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">A disciplined environment for monitoring digital assets and managing account activity with transparent controls.</p><div className="mt-9 flex flex-wrap gap-3"><Button asChild size="lg"><Link to="/signup">Open your account <ArrowRight/></Link></Button><Button asChild variant="outline" size="lg"><Link to="/markets">Explore markets</Link></Button></div><div className="mt-12 grid max-w-xl grid-cols-3 gap-4 border-t border-border pt-6"><Metric value="24/7" label="Market visibility"/><Metric value="100%" label="Ledger traceability"/><Metric value="2FA" label="Account ready"/></div></div><div className="relative hidden h-[520px] lg:block"><div className="absolute inset-12 rounded-full border border-primary/20 orbit"><span className="absolute left-1/2 top-0 size-3 -translate-x-1/2 rounded-full bg-primary glow-line"/><span className="absolute bottom-[8%] left-[12%] size-2 rounded-full bg-warning"/></div><div className="absolute inset-24 rounded-full border border-border orbit" style={{animationDirection:"reverse",animationDuration:"22s"}}/><div className="float-slow absolute inset-[32%] grid place-items-center rounded-full border border-primary/40 bg-card/80 backdrop-blur-xl"><Waypoints className="size-16 text-primary" strokeWidth={1}/></div><div className="absolute bottom-12 left-0 w-48 border border-border bg-card/90 p-4 backdrop-blur"><p className="font-mono text-[10px] text-muted-foreground">NETWORK STATUS</p><p className="mt-2 flex items-center gap-2 text-sm"><span className="status-dot"/> Operational</p></div></div></div></section><section className="mx-auto max-w-7xl px-5 py-20"><div className="mb-8 flex items-end justify-between"><div><p className="eyebrow">Market pulse</p><h2 className="mt-3 font-display text-3xl font-semibold">Live digital asset prices</h2></div><Link to="/markets" className="hidden items-center gap-2 text-sm text-primary md:flex">View all markets <ArrowRight className="size-4"/></Link></div><MarketTable compact/></section><section className="border-y border-border bg-card/25"><div className="mx-auto max-w-7xl px-5 py-20"><p className="eyebrow">Built for accountable access</p><h2 className="mt-4 max-w-2xl font-display text-3xl font-semibold md:text-5xl">Security is a system, not a slogan.</h2><div className="mt-12 grid gap-px bg-border md:grid-cols-3"><Feature icon={<ShieldCheck/>} title="Protected access" text="Verified sessions, password breach checks, and server-enforced authorization protect every private action."/><Feature icon={<Landmark/>} title="Auditable balances" text="Account balances are derived from an immutable ledger, preserving every authorized adjustment."/><Feature icon={<LockKeyhole/>} title="Private by design" text="Passwords are cryptographically protected and never visible—not even to platform administrators."/></div></div></section><section className="mx-auto grid max-w-7xl gap-12 px-5 py-24 md:grid-cols-2 md:items-center"><div><p className="eyebrow">Intentional by design</p><h2 className="mt-4 font-display text-4xl font-semibold">Clarity at every decision point.</h2><p className="mt-5 max-w-lg leading-7 text-muted-foreground">Review live reference prices, understand allocation before submitting, and keep a concise record of every order. No hidden mechanics. No invented certainty.</p><Button asChild variant="outline" className="mt-7"><Link to="/how-it-works">How Aurelium works <ArrowRight/></Link></Button></div><div className="border border-border bg-card/50 p-6"><div className="flex items-center justify-between border-b border-border pb-5"><span className="text-sm text-muted-foreground">Allocation preview</span><Activity className="size-4 text-primary"/></div><div className="py-9 text-center"><p className="font-mono text-5xl font-medium">25%</p><p className="mt-3 text-sm text-muted-foreground">of available account balance</p></div><div className="grid grid-cols-4 gap-2">{[10,25,50,75].map((n)=><div key={n} className={`rounded border p-3 text-center font-mono text-xs ${n===25?"border-primary bg-primary/10 text-primary":"border-border text-muted-foreground"}`}>{n}%</div>)}</div></div></section></main></SiteShell>}
+function Metric({value,label}:{value:string;label:string}){return <div><p className="font-mono text-xl font-medium">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div>}
+function Feature({icon,title,text}:{icon:React.ReactNode;title:string;text:string}){return <article className="bg-background p-7"><span className="text-primary">{icon}</span><h3 className="mt-7 font-display text-lg font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">{text}</p></article>}

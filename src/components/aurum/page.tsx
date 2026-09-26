@@ -1,0 +1,7 @@
+import type { ReactNode } from "react";
+import { SiteShell } from "./site-shell";
+export function PageIntro({eyebrow,title,description}:{eyebrow:string;title:string;description:string}){return <div className="border-b border-border"><div className="mx-auto max-w-7xl px-5 py-16 md:py-24"><p className="eyebrow">{eyebrow}</p><h1 className="mt-5 max-w-4xl font-display text-4xl font-semibold leading-tight md:text-6xl">{title}</h1><p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">{description}</p></div></div>}
+export function PublicPage({children}:{children:ReactNode}){return <SiteShell><main>{children}</main></SiteShell>}
+export function ContentGrid({children}:{children:ReactNode}){return <div className="mx-auto grid max-w-7xl gap-5 px-5 py-14 md:grid-cols-2 md:py-20">{children}</div>}
+export function InfoBlock({index,title,children}:{index?:string;title:string;children:ReactNode}){return <article className="info-block"><div className="flex items-start gap-4">{index&&<span className="font-mono text-xs text-primary">{index}</span>}<div><h2 className="font-display text-xl font-semibold">{title}</h2><div className="mt-3 text-sm leading-7 text-muted-foreground">{children}</div></div></div></article>}
+export const pageHead=(title:string,description:string)=>({meta:[{title:`${title} — Aurelium`},{name:"description",content:description},{property:"og:title",content:`${title} — Aurelium`},{property:"og:description",content:description},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]});
