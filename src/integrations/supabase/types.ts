@@ -148,6 +148,18 @@ export type Database = {
         Returns: boolean
       }
       initialize_my_account: { Args: never; Returns: undefined }
+      place_order: {
+        Args: {
+          _allocation_percent: number
+          _pair: string
+          _reference_price: number
+        }
+        Returns: string
+      }
+      update_my_display_name: {
+        Args: { _display_name: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_status: "active" | "suspended" | "closed"

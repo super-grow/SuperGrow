@@ -20,9 +20,19 @@ export const updateDisplayName = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => nameSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("accounts").update({ display_name: data.displayName, updated_at: new Date().toISOString() }).eq("user_id", context.userId);
+    const { error } = await context.supabase.rpc("update_my_display_name", { _display_name: data.displayName });
     if (error) throw new Error("Unable to update account");
     return { ok: true };
+  });
+
+const orderSchema = z.object({ pair: z.string().regex(/^[A-Z0-9]{2,10}\/USD$/), allocationPercent: z.union([z.literal(10),z.literal(25),z.literal(50),z.literal(75),z.literal(100)]), referencePrice: z.number().positive().finite() });
+export const placeOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => orderSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: orderId, error } = await context.supabase.rpc("place_order", { _pair: data.pair, _allocation_percent: data.allocationPercent, _reference_price: data.referencePrice });
+    if (error) throw new Error(error.message);
+    return { orderId };
   });
 
 async function requireAdmin(context: { supabase: any; userId: string }) {
