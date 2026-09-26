@@ -1,7 +1,8 @@
 # Roadmap
 
-- [ ] Define exact Dubai licensing authority/number, permitted countries, custody/execution provider, and regulated product scope.
-  - Stated: Dubai-based, already licensed, intended worldwide customers; provider not supplied.
-- [ ] Define secure authentication requirements; user requested no separate profiles. Passwords remain hashed and never visible to administrators.
-- [x] Research applicable platform and Meta financial-ad requirements from authoritative sources.
-- [ ] Design and implement only after license scope, permitted countries, and providers are established.
+- [x] Research applicable platform and advertising requirements.
+- [x] Build the complete public website, live reference market pages, authentication, account dashboard, order history, profile, admin shell, and legal/support routes.
+- [x] Secure passwords, private records, role checks, balance ledger, and percentage-based order reservation.
+- [ ] Connect licensed custody and execution provider; blocked on provider credentials and allowed jurisdiction list.
+- [ ] Activate real-money deposits and execution; blocked until provider integration and jurisdiction controls are configured.
+- [ ] Replace provisional business/legal copy with counsel-approved entity, license, contact, and jurisdiction details.
