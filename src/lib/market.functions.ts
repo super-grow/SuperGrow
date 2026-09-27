@@ -40,7 +40,7 @@ async function fetchCoinGecko(): Promise<Market[]> {
   if (!response.ok) throw new Error("CoinGecko unreachable");
   
   const rows = await response.json() as any[];
-  return COINS.map(coin => {
+  return COINS.map<Market | null>(coin => {
     const row = rows.find(r => r.id === coin.id);
     if (!row) return null;
     return {
