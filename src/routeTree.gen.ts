@@ -32,7 +32,6 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated/trades'
-import { Route as ApiPublicProvisionAdminRouteImport } from './routes/api/public/provision-admin'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -148,11 +147,6 @@ const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
   path: '/trades',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicProvisionAdminRoute = ApiPublicProvisionAdminRouteImport.update({
-  id: '/api/public/provision-admin',
-  path: '/api/public/provision-admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -177,7 +171,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/api/public/provision-admin': typeof ApiPublicProvisionAdminRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -202,7 +195,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/trades': typeof AuthenticatedTradesRoute
-  '/api/public/provision-admin': typeof ApiPublicProvisionAdminRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -229,7 +221,6 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
-  '/api/public/provision-admin': typeof ApiPublicProvisionAdminRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -256,7 +247,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/trades'
-    | '/api/public/provision-admin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -281,7 +271,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/trades'
-    | '/api/public/provision-admin'
   id:
     | '__root__'
     | '/'
@@ -307,7 +296,6 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/profile'
     | '/_authenticated/trades'
-    | '/api/public/provision-admin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -330,7 +318,6 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
-  ApiPublicProvisionAdminRoute: typeof ApiPublicProvisionAdminRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -496,13 +483,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTradesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/provision-admin': {
-      id: '/api/public/provision-admin'
-      path: '/api/public/provision-admin'
-      fullPath: '/api/public/provision-admin'
-      preLoaderRoute: typeof ApiPublicProvisionAdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -543,7 +523,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
-  ApiPublicProvisionAdminRoute: ApiPublicProvisionAdminRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
