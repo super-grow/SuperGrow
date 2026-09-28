@@ -14,8 +14,6 @@ export function TradingViewChart({ pair }: { pair: string }) {
     const node = host.current;
     if (!node) return;
     node.replaceChildren();
-    const widget = document.createElement("div");
-    widget.className = "tradingview-widget-container__widget h-full w-full";
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.async = true;
@@ -44,12 +42,14 @@ export function TradingViewChart({ pair }: { pair: string }) {
       support_host: "https://www.tradingview.com",
       autosize: true,
     });
-    node.append(widget, script);
+    node.append(script);
     return () => node.replaceChildren();
   }, [pair]);
 
-  return <section className="chart-frame">
-    <div ref={host} className="h-[430px] w-full" />
+  return <section className="chart-frame overflow-hidden">
+    <div className="h-[430px] w-full overflow-hidden">
+      <div ref={host} className="tradingview-chart-host h-full w-full" />
+    </div>
     <div className="border-t border-border px-5 py-2 text-right text-[10px] text-muted-foreground"><a href="https://www.tradingview.com/symbols/BTCUSD/?exchange=COINBASE" rel="noopener nofollow" target="_blank" className="hover:text-primary">Market chart by TradingView</a></div>
   </section>;
 }
