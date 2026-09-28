@@ -82,6 +82,24 @@ async function fetchBinance(): Promise<Market[]> {
   }).filter((m): m is Market => m !== null);
 }
 
+async function fetchCoinbase(): Promise<Market[]> {
+  const rows = await Promise.all(COINS.map(async (coin) => {
+    const response = await fetch(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`, {
+      headers: { accept: "application/json", "user-agent": "Supergrow-Market-Data/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error("Coinbase unreachable");
+    return response.json() as Promise<{ last: string; open: string; volume: string }>;
+  }));
+  return rows.map((row, index) => {
+    const coin = COINS[index];
+    if (!coin) throw new Error("Incomplete Coinbase response");
+    const price = Number(row.last), open = Number(row.open), baseVolume = Number(row.volume);
+    if (![price, open, baseVolume].every(Number.isFinite) || price <= 0 || open <= 0) throw new Error("Invalid Coinbase response");
+    return { symbol: coin.symbol, name: coin.name, price, change: ((price-open)/open)*100, volume: baseVolume*price, spark: [] };
+  });
+}
+
 export const getMarkets = createServerFn({ method: "GET" }).handler(async () => {
   const timestamp = new Date().toISOString();
   
@@ -97,8 +115,14 @@ export const getMarkets = createServerFn({ method: "GET" }).handler(async () => 
       const markets = await fetchBinance();
       return { markets, live: true, source: "binance", updatedAt: timestamp };
     } catch (binanceError) {
-      console.error("All crypto price sources failed:", binanceError);
-      return { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
+      console.warn("Binance fetch failed, falling back to Coinbase:", binanceError);
+      try {
+        const markets = await fetchCoinbase();
+        return { markets, live: true, source: "coinbase", updatedAt: timestamp };
+      } catch (coinbaseError) {
+        console.error("All crypto price sources failed:", coinbaseError);
+        return { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
+      }
     }
   }
 });
