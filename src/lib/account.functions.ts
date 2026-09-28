@@ -76,10 +76,8 @@ export const deleteAdminAccounts = createServerFn({ method: "POST" })
     if (data.userIds.includes(context.userId)) throw new Error("You cannot delete your own administrator account");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     for (const userId of data.userIds) {
-      await supabaseAdmin.from("balance_ledger").delete().eq("user_id", userId);
-      await supabaseAdmin.from("orders").delete().eq("user_id", userId);
       await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
-      await supabaseAdmin.from("accounts").delete().eq("user_id", userId);
+      await supabaseAdmin.from("accounts").update({ status: "closed" }).eq("user_id", userId);
       const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (error) throw new Error("One or more accounts could not be deleted");
     }
