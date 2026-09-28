@@ -47,7 +47,7 @@ export function TradingViewChart({ pair }: { pair: string }) {
   }, [pair]);
 
   return <section className="chart-frame overflow-hidden">
-    <div ref={host} className="tradingview-widget-container h-[430px] w-full overflow-hidden" />
+    <div ref={host} className="tradingview-widget-container h-[430px] w-full overflow-hidden [&_iframe]:!h-full [&_iframe]:!w-full" />
     <div className="border-t border-border px-5 py-2 text-right text-[10px] text-muted-foreground"><a href="https://www.tradingview.com/symbols/BTCUSD/?exchange=COINBASE" rel="noopener nofollow" target="_blank" className="hover:text-primary">Market chart by TradingView</a></div>
   </section>;
 }
