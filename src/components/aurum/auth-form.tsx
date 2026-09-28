@@ -22,9 +22,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     const result = mode === "login"
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/login` } });
+    if (result.error) { setBusy(false); setMessage(result.error.message); return; }
+    if (!result.data.session) {
+      const retry = await supabase.auth.signInWithPassword({ email, password });
+      if (retry.error) { setBusy(false); setMessage(retry.error.message); return; }
+    }
+    await supabase.rpc("initialize_my_account");
     setBusy(false);
-    if (result.error) { setMessage(result.error.message); return; }
-    if (mode === "signup" && !result.data.session) { setMessage("Check your email to confirm your account, then return to log in."); return; }
     navigate({ to: "/dashboard" });
   }
 
