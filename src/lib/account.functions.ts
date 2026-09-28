@@ -66,3 +66,34 @@ export const adjustBalance = createServerFn({ method: "POST" })
     if (error) throw new Error("Balance adjustment failed");
     return { ok: true };
   });
+
+const userIdsSchema = z.object({ userIds: z.array(z.string().uuid()).min(1).max(100) });
+export const deleteAdminAccounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => userIdsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context);
+    if (data.userIds.includes(context.userId)) throw new Error("You cannot delete your own administrator account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    for (const userId of data.userIds) {
+      await supabaseAdmin.from("balance_ledger").delete().eq("user_id", userId);
+      await supabaseAdmin.from("orders").delete().eq("user_id", userId);
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+      await supabaseAdmin.from("accounts").delete().eq("user_id", userId);
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (error) throw new Error("One or more accounts could not be deleted");
+    }
+    return { ok: true };
+  });
+
+const emailSchema = z.object({ userId: z.string().uuid(), email: z.string().email().max(255) });
+export const updateAdminAccountEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => emailSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, { email: data.email, email_confirm: true });
+    if (error) throw new Error("Email update failed");
+    return { ok: true };
+  });
