@@ -11,6 +11,7 @@ import { Logo } from "@/components/aurum/logo";
 import { pageHead } from "@/components/aurum/page";
 
 export const Route = createFileRoute("/admin-login")({
+  ssr: false,
   head: () => pageHead("Administrator sign in", "Restricted Supergrow administrator access."),
   component: AdminLogin,
 });
