@@ -40,19 +40,32 @@ async function requireAdmin(context: { supabase: any; userId: string }) {
   if (!data) throw new Error("Administrator access required");
 }
 
+export const checkAdminAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdmin(context);
+    return { authorized: true };
+  });
+
 export const getAdminAccounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: users }, { data: accounts }, { data: ledger }] = await Promise.all([
-      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+    const allUsers = [];
+    for (let page = 1; page <= 100; page += 1) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw new Error("Unable to load registered accounts");
+      allUsers.push(...data.users);
+      if (data.users.length < 1000) break;
+    }
+    const [{ data: accounts }, { data: ledger }] = await Promise.all([
       supabaseAdmin.from("accounts").select("user_id,display_name,status,created_at"),
       supabaseAdmin.from("balance_ledger").select("user_id,amount_usd"),
     ]);
     const sums = new Map<string, number>();
     for (const row of ledger ?? []) sums.set(row.user_id, (sums.get(row.user_id) ?? 0) + Number(row.amount_usd));
-    return (users?.users ?? []).map((user) => ({ id: user.id, email: user.email ?? "", createdAt: user.created_at, status: accounts?.find((a) => a.user_id === user.id)?.status ?? "active", balance: sums.get(user.id) ?? 0 }));
+    return allUsers.map((user) => ({ id: user.id, email: user.email ?? "", createdAt: user.created_at, status: accounts?.find((a) => a.user_id === user.id)?.status ?? "active", balance: sums.get(user.id) ?? 0 }));
   });
 
 const adjustSchema = z.object({ userId: z.string().uuid(), amount: z.number().finite().refine((v) => v !== 0).refine((v) => Math.abs(v) <= 10000000), note: z.string().trim().min(3).max(280) });
