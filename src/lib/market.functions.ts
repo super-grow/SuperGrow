@@ -68,7 +68,7 @@ async function fetchBinance(): Promise<Market[]> {
   
   // To keep it fast, we skip sparklines in the fallback source unless we really want them.
   // Fetching 4 separate kline endpoints would slow down the fallback.
-  return COINS.map(coin => {
+  return COINS.map<Market | null>(coin => {
     const row = rows.find(r => r.symbol === coin.binance);
     if (!row) return null;
     return {
