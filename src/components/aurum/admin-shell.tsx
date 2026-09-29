@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <aside className="border-r border-border p-4 md:min-h-[calc(100vh-72px)]">
         <nav className="space-y-1">
           <Link to="/admin" className="flex items-center gap-3 rounded bg-primary/10 px-3 py-3 text-sm text-primary"><ShieldCheck className="size-4"/>Accounts</Link>
-          <Link to="/dashboard" className="flex items-center gap-3 rounded px-3 py-3 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"><LayoutDashboard className="size-4"/>Customer workspace</Link>
         </nav>
       </aside>
       <main className="min-w-0 p-5 md:p-8">{children}</main>
