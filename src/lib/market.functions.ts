@@ -25,17 +25,26 @@ const staticFallback: Market[] = COINS.map(c => ({
   spark: []
 }));
 
+async function fetchWithTimeout(url: string, timeoutMs = 6500): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      headers: { accept: "application/json" },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Primary source: CoinGecko (Includes sparklines)
  */
 async function fetchCoinGecko(): Promise<Market[]> {
   const ids = COINS.map(c => c.id).join(",");
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`;
-  
-  const response = await fetch(url, { 
-    headers: { accept: "application/json" },
-    signal: AbortSignal.timeout(8000)
-  });
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`;
+  const response = await fetchWithTimeout(url);
   
   if (!response.ok) throw new Error("CoinGecko unreachable");
   
@@ -49,7 +58,7 @@ async function fetchCoinGecko(): Promise<Market[]> {
       price: row.current_price,
       change: row.price_change_percentage_24h ?? 0,
       volume: row.total_volume ?? 0,
-      spark: (row.sparkline_in_7d?.price ?? []).filter((_: any, i: number) => i % 12 === 0).slice(-24)
+      spark: []
     };
   }).filter((m): m is Market => m !== null);
 }
@@ -61,7 +70,7 @@ async function fetchBinance(): Promise<Market[]> {
   const symbols = COINS.map(c => c.binance);
   const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`;
   
-  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  const response = await fetchWithTimeout(url);
   if (!response.ok) throw new Error("Binance unreachable");
   
   const rows = await response.json() as any[];
@@ -84,10 +93,7 @@ async function fetchBinance(): Promise<Market[]> {
 
 async function fetchCoinbase(): Promise<Market[]> {
   const rows = await Promise.all(COINS.map(async (coin) => {
-    const response = await fetch(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`, {
-      headers: { accept: "application/json", "user-agent": "Supergrow-Market-Data/1.0" },
-      signal: AbortSignal.timeout(8000),
-    });
+    const response = await fetchWithTimeout(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`);
     if (!response.ok) throw new Error("Coinbase unreachable");
     return response.json() as Promise<{ last: string; open: string; volume: string }>;
   }));
@@ -100,28 +106,55 @@ async function fetchCoinbase(): Promise<Market[]> {
   });
 }
 
+async function fetchKraken(): Promise<Market[]> {
+  const response = await fetchWithTimeout("https://api.kraken.com/0/public/Ticker?pair=XBTUSD,ETHUSD,SOLUSD,XRPUSD");
+  if (!response.ok) throw new Error("Kraken unreachable");
+  const payload = await response.json() as {
+    error?: string[];
+    result?: Record<string, { c?: string[]; o?: string; v?: string[] }>;
+  };
+  if (payload.error?.length || !payload.result) throw new Error("Invalid Kraken response");
+  const aliases: Record<string, string[]> = {
+    BTC: ["XXBTZUSD", "XBTUSD"], ETH: ["XETHZUSD", "ETHUSD"],
+    SOL: ["SOLUSD"], XRP: ["XXRPZUSD", "XRPUSD"],
+  };
+  return COINS.map((coin) => {
+    const key = aliases[coin.symbol]?.find((candidate) => payload.result?.[candidate]);
+    const row = key ? payload.result?.[key] : undefined;
+    const price = Number(row?.c?.[0]);
+    const open = Number(row?.o);
+    const volume = Number(row?.v?.[1]);
+    if (![price, open, volume].every(Number.isFinite) || price <= 0 || open <= 0) throw new Error("Incomplete Kraken response");
+    return { symbol: coin.symbol, name: coin.name, price, change: ((price-open)/open)*100, volume: volume*price, spark: [] };
+  });
+}
+
 export const getMarkets = createServerFn({ method: "GET" }).handler(async () => {
   const timestamp = new Date().toISOString();
   
   try {
-    // Try CoinGecko first (preferred for sparklines)
-    const markets = await fetchCoinGecko();
-    return { markets, live: true, source: "coingecko", updatedAt: timestamp };
-  } catch (cgError) {
-    console.warn("CoinGecko fetch failed, falling back to Binance:", cgError);
+    const markets = await fetchKraken();
+    return { markets, live: true, source: "kraken", updatedAt: timestamp };
+  } catch (krakenError) {
+    console.warn("Kraken fetch failed, falling back to CoinGecko:", krakenError);
     
     try {
-      // Fallback to Binance
-      const markets = await fetchBinance();
-      return { markets, live: true, source: "binance", updatedAt: timestamp };
-    } catch (binanceError) {
-      console.warn("Binance fetch failed, falling back to Coinbase:", binanceError);
+      const markets = await fetchCoinGecko();
+      return { markets, live: true, source: "coingecko", updatedAt: timestamp };
+    } catch (cgError) {
+      console.warn("CoinGecko fetch failed, falling back to Binance:", cgError);
       try {
-        const markets = await fetchCoinbase();
-        return { markets, live: true, source: "coinbase", updatedAt: timestamp };
-      } catch (coinbaseError) {
-        console.error("All crypto price sources failed:", coinbaseError);
-        return { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
+        const markets = await fetchBinance();
+        return { markets, live: true, source: "binance", updatedAt: timestamp };
+      } catch (binanceError) {
+        console.warn("Binance fetch failed, falling back to Coinbase:", binanceError);
+        try {
+          const markets = await fetchCoinbase();
+          return { markets, live: true, source: "coinbase", updatedAt: timestamp };
+        } catch (coinbaseError) {
+          console.error("All crypto price sources failed:", coinbaseError);
+          return { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
+        }
       }
     }
   }
