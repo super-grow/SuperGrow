@@ -9,6 +9,13 @@ export type Market = {
   spark: number[] 
 };
 
+type MarketFeed = {
+  markets: Market[];
+  live: boolean;
+  source: string;
+  updatedAt: string;
+};
+
 const COINS = [
   { id: "bitcoin", symbol: "BTC", binance: "BTCUSDT", kraken: "XXBTZUSD", name: "Bitcoin" },
   { id: "ethereum", symbol: "ETH", binance: "ETHUSDT", kraken: "XETHZUSD", name: "Ethereum" },
@@ -26,7 +33,7 @@ const staticFallback: Market[] = COINS.map(c => ({
 }));
 
 // Simple in-memory cache to prevent hitting rate limits across multiple concurrent requests
-let marketCache: { data: any; timestamp: number } | null = null;
+let marketCache: { data: MarketFeed; timestamp: number } | null = null;
 const CACHE_TTL = 15000; // 15 seconds
 
 const HEADERS = {
@@ -128,7 +135,7 @@ async function fetchKraken(): Promise<Market[]> {
   if (data.error?.length > 0) throw new Error("Kraken API error");
   
   const results = data.result;
-  return COINS.map(coin => {
+  return COINS.map<Market | null>(coin => {
     const row = results[coin.kraken];
     if (!row) return null;
     const price = parseFloat(row.c[0]);
@@ -139,7 +146,7 @@ async function fetchKraken(): Promise<Market[]> {
       price: price,
       change: ((price - open) / open) * 100,
       volume: parseFloat(row.v[1]) * price,
-      spark: []
+      spark: [] as number[]
     };
   }).filter((m): m is Market => m !== null);
 }
@@ -148,7 +155,7 @@ async function fetchKraken(): Promise<Market[]> {
  * Fallback source: Coinbase
  */
 async function fetchCoinbase(): Promise<Market[]> {
-  const markets = await Promise.all(COINS.map(async (coin) => {
+  const markets = await Promise.all(COINS.map(async (coin): Promise<Market | null> => {
     try {
       const response = await fetchWithTimeout(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`);
       if (!response.ok) return null;
@@ -161,7 +168,7 @@ async function fetchCoinbase(): Promise<Market[]> {
         price, 
         change: ((price - open) / open) * 100, 
         volume: baseVolume * price, 
-        spark: [] 
+        spark: [] as number[]
       };
     } catch {
       return null;
