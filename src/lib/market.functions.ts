@@ -10,10 +10,10 @@ export type Market = {
 };
 
 const COINS = [
-  { id: "bitcoin", symbol: "BTC", binance: "BTCUSDT", name: "Bitcoin" },
-  { id: "ethereum", symbol: "ETH", binance: "ETHUSDT", name: "Ethereum" },
-  { id: "solana", symbol: "SOL", binance: "SOLUSDT", name: "Solana" },
-  { id: "ripple", symbol: "XRP", binance: "XRPUSDT", name: "XRP" },
+  { id: "bitcoin", symbol: "BTC", binance: "BTCUSDT", kraken: "XXBTZUSD", name: "Bitcoin" },
+  { id: "ethereum", symbol: "ETH", binance: "ETHUSDT", kraken: "XETHZUSD", name: "Ethereum" },
+  { id: "solana", symbol: "SOL", binance: "SOLUSDT", kraken: "SOLUSD", name: "Solana" },
+  { id: "ripple", symbol: "XRP", binance: "XRPUSDT", kraken: "XRPUSD", name: "XRP" },
 ];
 
 const staticFallback: Market[] = COINS.map(c => ({
@@ -25,28 +25,45 @@ const staticFallback: Market[] = COINS.map(c => ({
   spark: []
 }));
 
-async function fetchWithTimeout(url: string, timeoutMs = 6500): Promise<Response> {
+// Simple in-memory cache to prevent hitting rate limits across multiple concurrent requests
+let marketCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL = 15000; // 15 seconds
+
+const HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+};
+
+/**
+ * Safer fetch with timeout
+ */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 5000) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const id = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetch(url, {
-      headers: { accept: "application/json" },
-      signal: controller.signal,
+    const response = await fetch(url, {
+      ...options,
+      headers: { ...HEADERS, ...options.headers },
+      signal: controller.signal
     });
-  } finally {
-    clearTimeout(timeout);
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
   }
 }
 
 /**
  * Primary source: CoinGecko (Includes sparklines)
+ * Note: Often blocks data center IPs (403).
  */
 async function fetchCoinGecko(): Promise<Market[]> {
   const ids = COINS.map(c => c.id).join(",");
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`;
-  const response = await fetchWithTimeout(url);
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`;
   
-  if (!response.ok) throw new Error("CoinGecko unreachable");
+  const response = await fetchWithTimeout(url);
+  if (!response.ok) throw new Error(`CoinGecko failed: ${response.status}`);
   
   const rows = await response.json() as any[];
   return COINS.map<Market | null>(coin => {
@@ -58,104 +75,135 @@ async function fetchCoinGecko(): Promise<Market[]> {
       price: row.current_price,
       change: row.price_change_percentage_24h ?? 0,
       volume: row.total_volume ?? 0,
+      spark: (row.sparkline_in_7d?.price ?? []).filter((_: any, i: number) => i % 12 === 0).slice(-24)
+    };
+  }).filter((m): m is Market => m !== null);
+}
+
+/**
+ * Fallback source: Binance (Global and US)
+ */
+async function fetchBinance(): Promise<Market[]> {
+  const symbols = COINS.map(c => c.binance);
+  const symbolsQuery = JSON.stringify(symbols);
+  
+  // Try Global then US
+  for (const baseUrl of ["https://api.binance.com", "https://api.binance.us"]) {
+    try {
+      const url = `${baseUrl}/api/v3/ticker/24hr?symbols=${symbolsQuery}`;
+      const response = await fetchWithTimeout(url);
+      if (!response.ok) continue;
+      
+      const rows = await response.json() as any[];
+      return COINS.map<Market | null>(coin => {
+        const row = rows.find(r => r.symbol === coin.binance);
+        if (!row) return null;
+        return {
+          symbol: coin.symbol,
+          name: coin.name,
+          price: parseFloat(row.lastPrice),
+          change: parseFloat(row.priceChangePercent),
+          volume: parseFloat(row.quoteVolume),
+          spark: []
+        };
+      }).filter((m): m is Market => m !== null);
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("Binance (Global & US) unreachable");
+}
+
+/**
+ * Fallback source: Kraken (Very reliable for data centers)
+ */
+async function fetchKraken(): Promise<Market[]> {
+  const pairs = COINS.map(c => c.kraken).join(",");
+  const url = `https://api.kraken.com/0/public/Ticker?pair=${pairs}`;
+  
+  const response = await fetchWithTimeout(url);
+  if (!response.ok) throw new Error("Kraken unreachable");
+  
+  const data = await response.json() as any;
+  if (data.error?.length > 0) throw new Error("Kraken API error");
+  
+  const results = data.result;
+  return COINS.map(coin => {
+    const row = results[coin.kraken];
+    if (!row) return null;
+    const price = parseFloat(row.c[0]);
+    const open = parseFloat(row.o);
+    return {
+      symbol: coin.symbol,
+      name: coin.name,
+      price: price,
+      change: ((price - open) / open) * 100,
+      volume: parseFloat(row.v[1]) * price,
       spark: []
     };
   }).filter((m): m is Market => m !== null);
 }
 
 /**
- * Fallback source: Binance (High reliability, no sparklines in basic ticker)
+ * Fallback source: Coinbase
  */
-async function fetchBinance(): Promise<Market[]> {
-  const symbols = COINS.map(c => c.binance);
-  const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`;
-  
-  const response = await fetchWithTimeout(url);
-  if (!response.ok) throw new Error("Binance unreachable");
-  
-  const rows = await response.json() as any[];
-  
-  // To keep it fast, we skip sparklines in the fallback source unless we really want them.
-  // Fetching 4 separate kline endpoints would slow down the fallback.
-  return COINS.map<Market | null>(coin => {
-    const row = rows.find(r => r.symbol === coin.binance);
-    if (!row) return null;
-    return {
-      symbol: coin.symbol,
-      name: coin.name,
-      price: parseFloat(row.lastPrice),
-      change: parseFloat(row.priceChangePercent),
-      volume: parseFloat(row.quoteVolume),
-      spark: [] // Fallback doesn't provide sparklines to maintain speed
-    };
-  }).filter((m): m is Market => m !== null);
-}
-
 async function fetchCoinbase(): Promise<Market[]> {
-  const rows = await Promise.all(COINS.map(async (coin) => {
-    const response = await fetchWithTimeout(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`);
-    if (!response.ok) throw new Error("Coinbase unreachable");
-    return response.json() as Promise<{ last: string; open: string; volume: string }>;
+  const markets = await Promise.all(COINS.map(async (coin) => {
+    try {
+      const response = await fetchWithTimeout(`https://api.exchange.coinbase.com/products/${coin.symbol}-USD/stats`);
+      if (!response.ok) return null;
+      const row = await response.json() as { last: string; open: string; volume: string };
+      const price = Number(row.last), open = Number(row.open), baseVolume = Number(row.volume);
+      if (![price, open, baseVolume].every(Number.isFinite) || price <= 0 || open <= 0) return null;
+      return { 
+        symbol: coin.symbol, 
+        name: coin.name, 
+        price, 
+        change: ((price - open) / open) * 100, 
+        volume: baseVolume * price, 
+        spark: [] 
+      };
+    } catch {
+      return null;
+    }
   }));
-  return rows.map((row, index) => {
-    const coin = COINS[index];
-    if (!coin) throw new Error("Incomplete Coinbase response");
-    const price = Number(row.last), open = Number(row.open), baseVolume = Number(row.volume);
-    if (![price, open, baseVolume].every(Number.isFinite) || price <= 0 || open <= 0) throw new Error("Invalid Coinbase response");
-    return { symbol: coin.symbol, name: coin.name, price, change: ((price-open)/open)*100, volume: baseVolume*price, spark: [] };
-  });
-}
-
-async function fetchKraken(): Promise<Market[]> {
-  const response = await fetchWithTimeout("https://api.kraken.com/0/public/Ticker?pair=XBTUSD,ETHUSD,SOLUSD,XRPUSD");
-  if (!response.ok) throw new Error("Kraken unreachable");
-  const payload = await response.json() as {
-    error?: string[];
-    result?: Record<string, { c?: string[]; o?: string; v?: string[] }>;
-  };
-  if (payload.error?.length || !payload.result) throw new Error("Invalid Kraken response");
-  const aliases: Record<string, string[]> = {
-    BTC: ["XXBTZUSD", "XBTUSD"], ETH: ["XETHZUSD", "ETHUSD"],
-    SOL: ["SOLUSD"], XRP: ["XXRPZUSD", "XRPUSD"],
-  };
-  return COINS.map((coin) => {
-    const key = aliases[coin.symbol]?.find((candidate) => payload.result?.[candidate]);
-    const row = key ? payload.result?.[key] : undefined;
-    const price = Number(row?.c?.[0]);
-    const open = Number(row?.o);
-    const volume = Number(row?.v?.[1]);
-    if (![price, open, volume].every(Number.isFinite) || price <= 0 || open <= 0) throw new Error("Incomplete Kraken response");
-    return { symbol: coin.symbol, name: coin.name, price, change: ((price-open)/open)*100, volume: volume*price, spark: [] };
-  });
+  
+  const filtered = markets.filter((m): m is Market => m !== null);
+  if (filtered.length === 0) throw new Error("Coinbase unreachable");
+  return filtered;
 }
 
 export const getMarkets = createServerFn({ method: "GET" }).handler(async () => {
+  const now = Date.now();
+  if (marketCache && (now - marketCache.timestamp < CACHE_TTL)) {
+    return marketCache.data;
+  }
+
   const timestamp = new Date().toISOString();
   
-  try {
-    const markets = await fetchKraken();
-    return { markets, live: true, source: "kraken", updatedAt: timestamp };
-  } catch (krakenError) {
-    console.warn("Kraken fetch failed, falling back to CoinGecko:", krakenError);
-    
+  // Try providers in order of richness/reliability
+  const providers = [
+    { name: "coingecko", fn: fetchCoinGecko },
+    { name: "binance", fn: fetchBinance },
+    { name: "kraken", fn: fetchKraken },
+    { name: "coinbase", fn: fetchCoinbase }
+  ];
+
+  for (const provider of providers) {
     try {
-      const markets = await fetchCoinGecko();
-      return { markets, live: true, source: "coingecko", updatedAt: timestamp };
-    } catch (cgError) {
-      console.warn("CoinGecko fetch failed, falling back to Binance:", cgError);
-      try {
-        const markets = await fetchBinance();
-        return { markets, live: true, source: "binance", updatedAt: timestamp };
-      } catch (binanceError) {
-        console.warn("Binance fetch failed, falling back to Coinbase:", binanceError);
-        try {
-          const markets = await fetchCoinbase();
-          return { markets, live: true, source: "coinbase", updatedAt: timestamp };
-        } catch (coinbaseError) {
-          console.error("All crypto price sources failed:", coinbaseError);
-          return { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
-        }
+      const markets = await provider.fn();
+      if (markets && markets.length > 0) {
+        const result = { markets, live: true, source: provider.name, updatedAt: timestamp };
+        marketCache = { data: result, timestamp: now };
+        return result;
       }
+    } catch (err) {
+      console.warn(`Market provider ${provider.name} failed:`, err instanceof Error ? err.message : err);
     }
   }
+
+  console.error("All crypto price sources failed. Returning static fallback.");
+  const finalResult = { markets: staticFallback, live: false, source: "none", updatedAt: timestamp };
+  // Don't cache the failed state for too long so we retry soon
+  return finalResult;
 });
