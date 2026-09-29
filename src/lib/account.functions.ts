@@ -68,14 +68,14 @@ export const getAdminAccounts = createServerFn({ method: "GET" })
     return allUsers.map((user) => ({ id: user.id, email: user.email ?? "", createdAt: user.created_at, status: accounts?.find((a) => a.user_id === user.id)?.status ?? "active", balance: sums.get(user.id) ?? 0 }));
   });
 
-const adjustSchema = z.object({ userId: z.string().uuid(), amount: z.number().finite().refine((v) => v !== 0).refine((v) => Math.abs(v) <= 10000000), note: z.string().trim().min(3).max(280) });
+const adjustSchema = z.object({ userId: z.string().uuid(), amount: z.number().finite().refine((v) => v !== 0).refine((v) => Math.abs(v) <= 10000000), note: z.string().trim().max(280).optional() });
 export const adjustBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => adjustSchema.parse(input))
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("balance_ledger").insert({ user_id: data.userId, amount_usd: data.amount, entry_type: data.amount > 0 ? "admin_credit" : "admin_debit", note: data.note, created_by: context.userId });
+    const { error } = await supabaseAdmin.from("balance_ledger").insert({ user_id: data.userId, amount_usd: data.amount, entry_type: data.amount > 0 ? "admin_credit" : "admin_debit", note: data.note || "Balance update", created_by: context.userId });
     if (error) throw new Error("Balance adjustment failed");
     return { ok: true };
   });
