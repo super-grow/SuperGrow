@@ -29,7 +29,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     }
     await supabase.rpc("initialize_my_account");
     setBusy(false);
-    navigate({ to: "/dashboard" });
+    navigate({ to: mode === "signup" ? "/welcome" : "/dashboard" });
   }
 
   return <main className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
