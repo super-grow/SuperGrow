@@ -11,7 +11,8 @@
 - [x] Harden the public live-price feed with independent providers and automatic failover.
 - [x] Redesign all public and signed-in surfaces around premium AI investment intelligence without changing functionality.
 - [x] Treat mobile as the primary layout and validate core public, authentication, and account screens there before desktop.
-- [ ] Research institutional fintech patterns and redesign the homepage around credible, high-value automated investment management.
+- [x] Research institutional fintech patterns and replace the homepage slogan with credible, capability-led positioning.
+- [x] Refine the homepage headline around AI-guided investing and continuous portfolio growth.
 - [ ] Connect licensed custody and execution provider; blocked on provider credentials and allowed jurisdiction list.
 - [ ] Activate real-money deposits and execution; blocked until provider integration and jurisdiction controls are configured.
 - [ ] Replace provisional business/legal copy with counsel-approved entity, license, contact, and jurisdiction details.
