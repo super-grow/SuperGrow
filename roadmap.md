@@ -9,6 +9,7 @@
 - [x] Separate administrator sign-in from customer access, enforce the administrator role, and support audited balance changes and bulk account removal.
 - [x] Keep customer sessions across reopening and navigation, make the account logo return to Overview, and remove the header sign-out control.
 - [x] Harden the public live-price feed with independent providers and automatic failover.
+- [ ] Redesign all public and signed-in surfaces around premium AI investment intelligence without changing functionality.
 - [ ] Connect licensed custody and execution provider; blocked on provider credentials and allowed jurisdiction list.
 - [ ] Activate real-money deposits and execution; blocked until provider integration and jurisdiction controls are configured.
 - [ ] Replace provisional business/legal copy with counsel-approved entity, license, contact, and jurisdiction details.
